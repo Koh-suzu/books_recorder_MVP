@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookScan MVP - 爆速登録検証ツール</title>
+    <!-- Google Material Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- バーコードリーダーライブラリ -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root {
+            --primary: #6200ee;
+            --secondary: #03dac6;
+            --background: #f8f9fa;
+            --surface: #ffffff;
+            --text-main: #212121;
+            --text-sub: #757575;
+            --error: #b00020;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* ヘッダー・統計エリア */
+        header {
+            background: var(--surface);
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .stats-banner {
+            background: var(--primary);
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stats-val {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* メインコンテンツ */
+        main {
+            padding: 16px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* スキャナーエリア */
+        #reader-container {
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: none;
+            margin-bottom: 16px;
+        }
+
+        /* 結果プレビューカード */
+        #result-preview {
+            display: none;
+            background: var(--surface);
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .book-detail-flex {
+            display: flex;
+            gap: 16px;
+        }
+
+        .preview-cover {
+            width: 80px;
+            height: 110px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #eee;
+        }
+
+        .preview-info {
+            flex: 1;
+        }
+
+        .preview-title {
+            font-weight: bold;
+            font-size: 1rem;
+            margin: 0 0 4px 0;
+        }
+
+        .preview-author {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin: 0;
+        }
+
+        /* ボタン */
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 28px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px rgba(98,0,238,0.2);
+        }
+
+        .btn-success {
+            background: var(--secondary);
+            color: var(--text-main);
+            margin-top: 16px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            margin-top: 12px;
+        }
+
+        /* 登録済みリスト */
+        .list-title {
+            font-size: 1.1rem;
+            margin: 24px 0 12px 0;
+            border-left: 4px solid var(--primary);
+            padding-left: 8px;
+        }
+
+        .book-card {
+            background: var(--surface);
+            display: flex;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .book-thumb {
+            width: 50px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 12px;
+        }
+
+        .book-meta {
+            flex: 1;
+        }
+
+        .book-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .book-extra {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+        }
+
+        .reg-time {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 0.8rem;
+            background: #f0e6ff;
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div style="font-weight: 500; font-size: 1.2rem;">BookScan MVP</div>
+    <div class="stats-banner">
+        平均登録時間: <span id="avg-time" class="stats-val">0.0</span> 秒
+    </div>
+</header>
+
+<main>
+    <!-- メイン操作エリア -->
+    <div id="action-area">
+        <button id="start-scan-btn" class="btn btn-primary" onclick="startScan()">
+            バーコードを読み取る
+        </button>
+    </div>
+
+    <!-- スキャナー表示エリア -->
+    <div id="reader-container">
+        <div id="reader"></div>
+        <button class="btn btn-outline" style="border-radius:0; border:none; background:#eee;" onclick="stopScan()">キャンセル</button>
+    </div>
+
+    <!-- ローディング表示 -->
+    <div id="loading" class="loading-spinner">書籍情報を取得中...</div>
+
+    <!-- 解析結果表示（登録前確認） -->
+    <div id="result-preview">
+        <div class="book-detail-flex">
+            <img id="prev-img" class="preview-cover" src="" alt="cover">
+            <div class="preview-info">
+                <p id="prev-title" class="preview-title"></p>
+                <p id="prev-author" class="preview-author"></p>
+                <p id="prev-publisher" class="preview-author" style="font-size: 0.75rem;"></p>
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="registerBook()">登録する</button>
+    </div>
+
+    <!-- 登録済みリスト -->
+    <h2 class="list-title">登録済みの本</h2>
+    <div id="book-list">
+        <!-- JSで動的に追加 -->
+    </div>
+</main>
+
+<script>
+    // 状態管理
+    let html5QrCode;
+    let startTime;
+    let currentBook = null;
+    let books = JSON.parse(localStorage.getItem('registeredBooks') || '[]');
+
+    // 初期化表示
+    renderList();
+
+    /**
+     * スキャン開始
+     */
+    async function startScan() {
+        // 計測開始
+        startTime = performance.now();
+        
+        document.getElementById('start-scan-btn').style.display = 'none';
+        document.getElementById('reader-container').style.display = 'block';
+        document.getElementById('result-preview').style.display = 'none';
+
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+
+        try {
+            await html5QrCode.start(
+                { facingMode: "environment" }, 
+                config,
+                onScanSuccess
+            );
+        } catch (err) {
+            alert("カメラの起動に失敗しました: " + err);
+            stopScan();
+        }
+    }
+
+    /**
+     * スキャン成功時処理
+     */
+    async function onScanSuccess(decodedText) {
+        // ISBN（数字13桁または10桁）かチェック
+        if (!/^\d{10,13}$/.test(decodedText)) return;
+
+        await stopScan();
+        fetchBookInfo(decodedText);
+    }
+
+    /**
+     * スキャン停止
+     */
+    async function stopScan() {
+        if (html5QrCode) {
+            await html5QrCode.stop();
+            html5QrCode = null;
+        }
+        document.getElementById('reader-container').style.display = 'none';
+        document.getElementById('start-scan-btn').style.display = 'block';
+    }
+
+    /**
+     * Google Books APIで書籍情報取得
+     */
+    async function fetchBookInfo(isbn) {
+        const loading = document.getElementById('loading');
+        loading.style.display = 'block';
+        
+        try {
+            const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+            const data = await response.json();
+
+            if (data.totalItems > 0) {
+                const info = data.items[0].volumeInfo;
+                currentBook = {
+                    title: info.title,
+                    author: info.authors ? info.authors.join(', ') : '不明な著者',
+                    publisher: info.publisher || '不明な出版社',
+                    thumbnail: info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : 'https://via.placeholder.com/150x200?text=No+Image',
+                    isbn: isbn
+                };
+                showPreview(currentBook);
+            } else {
+                alert("本が見つかりませんでした。");
+                document.getElementById('start-scan-btn').style.display = 'block';
+            }
+        } catch (err) {
+            alert("データ取得エラーが発生しました。");
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    /**
+     * プレビュー表示
+     */
+    function showPreview(book) {
+        document.getElementById('prev-title').innerText = book.title;
+        document.getElementById('prev-author').innerText = book.author;
+        document.getElementById('prev-publisher').innerText = book.publisher;
+        document.getElementById('prev-img').src = book.thumbnail;
+        document.getElementById('result-preview').style.display = 'block';
+        document.getElementById('start-scan-btn').style.display = 'none';
+    }
+
+    /**
+     * 登録処理（ここで計測終了）
+     */
+    function registerBook() {
+        const endTime = performance.now();
+        const durationSeconds = ((endTime - startTime) / 1000).toFixed(1);
+
+        const newEntry = {
+            ...currentBook,
+            registeredAt: new Date().toLocaleString(),
+            scanTime: parseFloat(durationSeconds)
+        };
+
+        books.unshift(newEntry);
+        localStorage.setItem('registeredBooks', JSON.stringify(books));
+
+        // リセット
+        currentBook = null;
+        document.getElementById('result-preview').style.display = 'none';
+        document.getElementById('start-scan-btn').style.display = 'block';
+        
+        renderList();
+    }
+
+    /**
+     * リスト描画と平均時間の計算
+     */
+    function renderList() {
+        const listContainer = document.getElementById('book-list');
+        listContainer.innerHTML = '';
+
+        if (books.length === 0) {
+            listContainer.innerHTML = '<p style="color:#999; text-align:center;">登録された本はありません</p>';
+            document.getElementById('avg-time').innerText = '0.0';
+            return;
+        }
+
+        let totalTime = 0;
+        books.forEach(book => {
+            totalTime += book.scanTime;
+            const card = document.createElement('div');
+            card.className = 'book-card';
+            card.innerHTML = `
+                <img src="${book.thumbnail}" class="book-thumb">
+                <div class="book-meta">
+                    <p class="book-name">${book.title}</p>
+                    <p class="book-extra">${book.author} / ${book.publisher}</p>
+                    <p class="book-extra">${book.registeredAt}</p>
+                    <span class="reg-time">登録時間: ${book.scanTime}s</span>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+
+        const avg = (totalTime / books.length).toFixed(1);
+        document.getElementById('avg-time').innerText = avg;
+    }
+</script>
+
+</body>
+</html>
