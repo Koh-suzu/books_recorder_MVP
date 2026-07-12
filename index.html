@@ -274,25 +274,50 @@
         document.getElementById('scan-btn').style.display = 'block';
     }
 
-    /**
-     * openBD APIから書籍情報取得
+   /**
+     * 書籍情報を取得（openBDをメインに、画像をGoogle Booksで補完）
      */
     async function fetchFromOpenBD(isbn) {
         const loading = document.getElementById('loading-spinner');
         loading.style.display = 'block';
 
         try {
-            // openBDはカンマ区切りで複数ISBNを投げられるが今回は1つだけ
+            // 1. openBDで基本情報を取得
             const res = await fetch(`https://api.openbd.jp/v1/get?isbn=${isbn}`);
             const data = await res.json();
 
             if (data && data[0]) {
                 const b = data[0].summary;
+                
+                let coverUrl = b.cover; // openBDの画像URL
+
+                // 2. openBDに画像がない場合、Google Books APIに画像を探しに行く
+                if (!coverUrl) {
+                    try {
+                        const gRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+                        const gData = await gRes.json();
+                        if (gData.totalItems > 0) {
+                            const gInfo = gData.items[0].volumeInfo;
+                            if (gInfo.imageLinks) {
+                                // より高画質な画像があれば取得。なければサムネイル。
+                                coverUrl = gInfo.imageLinks.thumbnail.replace('http:', 'https:');
+                            }
+                        }
+                    } catch (err) {
+                        console.log("Google Booksからの画像取得に失敗:", err);
+                    }
+                }
+
+                // 3. それでも画像がない場合はダミー画像
+                if (!coverUrl) {
+                    coverUrl = `https://via.placeholder.com/150x200?text=${encodeURIComponent(b.title)}`;
+                }
+
                 currentData = {
                     title: b.title,
                     author: b.author || "不明な著者",
                     publisher: b.publisher || "不明な出版社",
-                    cover: b.cover || "https://via.placeholder.com/150x200?text=No+Image",
+                    cover: coverUrl,
                     isbn: isbn
                 };
                 showPreview();
@@ -300,10 +325,9 @@
                 alert("書籍データが見つかりませんでした。");
                 document.getElementById('scan-btn').style.display = 'block';
             }
-        }catch (e) {
-    console.error(e);
-    alert("通信エラーが発生しました。\n" + e.message);
-} finally {
+        } catch (e) {
+            alert("通信エラーが発生しました。");
+        } finally {
             loading.style.display = 'none';
         }
     }
