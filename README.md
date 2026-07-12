@@ -1,2 +1,2 @@
 # books_recorder_MVP
-バーコードを利用した読書家向けMVP
+MVP for recording books by scanning ISBN barcodes.
