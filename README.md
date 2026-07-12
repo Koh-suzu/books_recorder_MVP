@@ -1,0 +1,2 @@
+# books_recorder_MVP
+バーコードを利用した読書家向けMVP
