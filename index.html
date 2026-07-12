@@ -17,6 +17,7 @@
             --text-light: #757575;
             --amazon: #ff9900;
             --rakuten: #bf0000;
+            --guide-bg: rgba(0, 0, 0, 0.7);
         }
 
         body {
@@ -28,7 +29,7 @@
             line-height: 1.5;
         }
 
-        /* ヘッダー統計エリア */
+        /* ヘッダー */
         header {
             background: var(--primary);
             color: white;
@@ -55,14 +56,35 @@
             margin: 0 auto;
         }
 
-        /* スキャナーエリア */
+        /* スキャナーエリアの強化 */
         #reader-wrapper {
             display: none;
+            position: relative;
             background: #000;
             border-radius: 16px;
             overflow: hidden;
             margin-bottom: 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* スキャン中の指示ガイド */
+        .scan-instruction {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--guide-bg);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-size: 0.85rem;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .scan-instruction b {
+            color: var(--accent);
+            font-size: 0.95rem;
         }
 
         /* 解析結果プレビュー */
@@ -80,7 +102,7 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
         .preview-flex { display: flex; gap: 16px; }
-        .preview-img { width: 100px; height: 140px; object-fit: cover; border-radius: 6px; background: #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .preview-img { width: 100px; height: 140px; object-fit: cover; border-radius: 6px; background: #eee; }
         .preview-info { flex: 1; }
         .preview-info h3 { margin: 0 0 6px 0; font-size: 1rem; color: var(--primary); }
         .preview-info p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
@@ -97,7 +119,7 @@
 
         .list-img { width: 60px; height: 85px; object-fit: cover; margin-right: 16px; border-radius: 4px; background: #eee; }
         .list-details { flex: 1; }
-        .list-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .list-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 4px; }
         .list-meta { font-size: 0.75rem; color: var(--text-light); margin-bottom: 2px; }
         
         .time-badge {
@@ -111,7 +133,6 @@
             margin: 6px 0;
         }
 
-        /* 外部リンクボタン */
         .link-group { display: flex; gap: 8px; margin-top: 8px; }
         .btn-link {
             flex: 1;
@@ -121,13 +142,11 @@
             border-radius: 6px;
             font-weight: bold;
             text-align: center;
-            transition: opacity 0.2s;
         }
-        .btn-link:active { opacity: 0.7; }
         .amazon { background-color: var(--amazon); color: #000; }
         .rakuten { background-color: var(--rakuten); color: #fff; }
 
-        /* アクションボタン（FAB） */
+        /* FAB */
         .fab {
             position: fixed;
             bottom: 30px;
@@ -155,7 +174,6 @@
             margin-top: 16px;
             font-weight: bold;
             font-size: 1rem;
-            cursor: pointer;
         }
 
         .loading { text-align: center; padding: 20px; display: none; color: var(--primary); font-weight: 500; }
@@ -173,12 +191,15 @@
 <main>
     <!-- スキャナーエリア -->
     <div id="reader-wrapper">
+        <div class="scan-instruction">
+            裏表紙の<b>上段のバーコード</b>を<br>枠内に収めてください (97...から始まるもの)
+        </div>
         <div id="reader"></div>
-        <button onclick="stopScan()" style="width:100%; padding:12px; border:none; background:#333; color:white; font-weight:bold;">キャンセル</button>
+        <button onclick="stopScan()" style="width:100%; padding:12px; border:none; background:#333; color:white; font-weight:bold; position:relative; z-index:20;">キャンセル</button>
     </div>
 
     <!-- ローディング -->
-    <div id="loading-spinner" class="loading">openBDから取得中...</div>
+    <div id="loading-spinner" class="loading">情報を取得中...</div>
 
     <!-- 解析結果プレビュー -->
     <div id="preview-card">
@@ -203,13 +224,10 @@
     let html5QrCode;
     let startTime;
     let currentData = null;
-    let history = JSON.parse(localStorage.getItem('bookHistory_v3') || '[]');
+    let history = JSON.parse(localStorage.getItem('bookHistory_v4') || '[]');
 
     updateUI();
 
-    /**
-     * スキャン開始（タイマー開始）
-     */
     async function startScan() {
         startTime = performance.now();
         document.getElementById('scan-btn').style.display = 'none';
@@ -220,8 +238,18 @@
         try {
             await html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 150 } },
-                (isbn) => { if(/^\d{10,13}$/.test(isbn)) { stopScan(); fetchBookData(isbn); } }
+                { 
+                    fps: 10, 
+                    qrbox: { width: 280, height: 150 },
+                    aspectRatio: 1.0
+                },
+                (isbn) => { 
+                    // 日本の本のISBN（978または979から始まる）を優先的にチェック
+                    if(/^97[89]\d{10}$/.test(isbn) || /^\d{10,13}$/.test(isbn)) { 
+                        stopScan(); 
+                        fetchBookData(isbn); 
+                    } 
+                }
             );
         } catch (err) {
             alert("カメラを起動できません。HTTPS環境でアクセスしてください。");
@@ -235,9 +263,6 @@
         document.getElementById('scan-btn').style.display = 'block';
     }
 
-    /**
-     * openBD APIのみを使用して書籍情報を取得
-     */
     async function fetchBookData(isbn) {
         const loading = document.getElementById('loading-spinner');
         loading.style.display = 'block';
@@ -248,8 +273,6 @@
 
             if (data && data[0]) {
                 const b = data[0].summary;
-                
-                // 画像がない場合のプレースホルダー（本のタイトルを埋め込む）
                 const coverUrl = b.cover ? b.cover : `https://via.placeholder.com/150x200?text=${encodeURIComponent(b.title.substring(0,10))}`;
 
                 currentData = {
@@ -261,7 +284,7 @@
                 };
                 showPreview();
             } else {
-                alert("書籍データが見つかりませんでした。");
+                alert("書籍データが見つかりませんでした。別のバーコードを試してください。");
                 document.getElementById('scan-btn').style.display = 'block';
             }
         } catch (e) {
@@ -289,7 +312,7 @@
         };
 
         history.unshift(newBook);
-        localStorage.setItem('bookHistory_v3', JSON.stringify(history));
+        localStorage.setItem('bookHistory_v4', JSON.stringify(history));
 
         currentData = null;
         document.getElementById('preview-card').style.display = 'none';
