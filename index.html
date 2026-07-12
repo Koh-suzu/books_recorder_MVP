@@ -293,6 +293,9 @@
      * スキャン成功時処理
      */
     async function onScanSuccess(decodedText) {
+
+        alert("読み取ったコード: " + decodedText);
+        
         // ISBN（数字13桁または10桁）かチェック
         if (!/^\d{10,13}$/.test(decodedText)) return;
 
