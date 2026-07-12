@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BookScan MVP (openBD版)</title>
+    <title>BookScan MVP - 爆速購入導線版</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <!-- バーコードスキャンライブラリ -->
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -11,10 +11,12 @@
         :root {
             --primary: #3f51b5;
             --accent: #ff4081;
-            --bg: #f5f5f5;
+            --bg: #f8f9fa;
             --card: #ffffff;
             --text: #212121;
             --text-light: #757575;
+            --amazon: #ff9900;
+            --rakuten: #bf0000;
         }
 
         body {
@@ -22,114 +24,82 @@
             margin: 0;
             background-color: var(--bg);
             color: var(--text);
-            padding-bottom: 100px;
+            padding-bottom: 120px;
+            line-height: 1.5;
         }
 
-        /* 統計ヘッダー */
+        /* ヘッダー統計エリア */
         header {
             background: var(--primary);
             color: white;
             padding: 16px;
             text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
         .avg-container {
-            font-size: 0.9rem;
-            margin-top: 8px;
-            background: rgba(255,255,255,0.2);
-            padding: 4px 12px;
+            font-size: 0.85rem;
+            margin-top: 6px;
+            background: rgba(255,255,255,0.25);
+            padding: 4px 16px;
             border-radius: 20px;
             display: inline-block;
         }
 
-        /* メインエリア */
         main {
             padding: 16px;
             max-width: 500px;
             margin: 0 auto;
         }
 
-        /* スキャナー */
+        /* スキャナーエリア */
         #reader-wrapper {
             display: none;
             background: #000;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
             margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         /* 解析結果プレビュー */
         #preview-card {
             display: none;
             background: var(--card);
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
             margin-bottom: 20px;
             border: 2px solid var(--accent);
+            animation: fadeIn 0.3s ease;
         }
 
-        .preview-flex {
-            display: flex;
-            gap: 16px;
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .preview-img {
-            width: 90px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 4px;
-            background: #eee;
-        }
-
-        .preview-info h3 {
-            margin: 0 0 8px 0;
-            font-size: 1rem;
-        }
-
-        .preview-info p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
+        .preview-flex { display: flex; gap: 16px; }
+        .preview-img { width: 100px; height: 140px; object-fit: cover; border-radius: 6px; background: #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .preview-info { flex: 1; }
+        .preview-info h3 { margin: 0 0 6px 0; font-size: 1rem; color: var(--primary); }
+        .preview-info p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
 
         /* 登録済みリスト */
         .list-item {
             display: flex;
             background: var(--card);
-            margin-bottom: 12px;
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
 
-        .list-img {
-            width: 50px;
-            height: 70px;
-            object-fit: cover;
-            margin-right: 12px;
-            border-radius: 2px;
-        }
-
-        .list-details {
-            flex: 1;
-        }
-
-        .list-title {
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .list-meta {
-            font-size: 0.75rem;
-            color: var(--text-light);
-        }
-
+        .list-img { width: 60px; height: 85px; object-fit: cover; margin-right: 16px; border-radius: 4px; background: #eee; }
+        .list-details { flex: 1; }
+        .list-title { font-size: 0.95rem; font-weight: 500; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .list-meta { font-size: 0.75rem; color: var(--text-light); margin-bottom: 2px; }
+        
         .time-badge {
             display: inline-block;
             background: #e8f5e9;
@@ -137,24 +107,40 @@
             padding: 2px 8px;
             border-radius: 4px;
             font-weight: bold;
-            font-size: 0.75rem;
-            margin-top: 4px;
+            font-size: 0.7rem;
+            margin: 6px 0;
         }
 
-        /* アクションボタン */
+        /* 外部リンクボタン */
+        .link-group { display: flex; gap: 8px; margin-top: 8px; }
+        .btn-link {
+            flex: 1;
+            text-decoration: none;
+            font-size: 0.75rem;
+            padding: 6px 0;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            transition: opacity 0.2s;
+        }
+        .btn-link:active { opacity: 0.7; }
+        .amazon { background-color: var(--amazon); color: #000; }
+        .rakuten { background-color: var(--rakuten); color: #fff; }
+
+        /* アクションボタン（FAB） */
         .fab {
             position: fixed;
-            bottom: 24px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             background: var(--accent);
             color: white;
             border: none;
-            padding: 16px 32px;
-            border-radius: 30px;
-            font-size: 1rem;
-            font-weight: 500;
-            box-shadow: 0 4px 15px rgba(255,64,129,0.4);
+            padding: 18px 40px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-shadow: 0 6px 20px rgba(255,64,129,0.4);
             cursor: pointer;
             z-index: 90;
         }
@@ -164,24 +150,21 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 12px;
+            padding: 14px;
             border-radius: 8px;
             margin-top: 16px;
             font-weight: bold;
             font-size: 1rem;
+            cursor: pointer;
         }
 
-        .loading {
-            text-align: center;
-            padding: 20px;
-            display: none;
-        }
+        .loading { text-align: center; padding: 20px; display: none; color: var(--primary); font-weight: 500; }
     </style>
 </head>
 <body>
 
 <header>
-    <div>読書家向け爆速メモ(openBD)</div>
+    <div>読みたい本登録 MVP</div>
     <div class="avg-container">
         平均登録時間: <span id="avg-val">0.0</span>秒
     </div>
@@ -191,11 +174,11 @@
     <!-- スキャナーエリア -->
     <div id="reader-wrapper">
         <div id="reader"></div>
-        <button onclick="stopScan()" style="width:100%; padding:10px; border:none; background:#444; color:white;">キャンセル</button>
+        <button onclick="stopScan()" style="width:100%; padding:12px; border:none; background:#333; color:white; font-weight:bold;">キャンセル</button>
     </div>
 
     <!-- ローディング -->
-    <div id="loading-spinner" class="loading">書籍データを取得中...</div>
+    <div id="loading-spinner" class="loading">openBDから取得中...</div>
 
     <!-- 解析結果プレビュー -->
     <div id="preview-card">
@@ -207,10 +190,10 @@
                 <p id="p-pub">出版社</p>
             </div>
         </div>
-        <button class="btn-register" onclick="saveBook()">この本を登録する</button>
+        <button class="btn-register" onclick="saveBook()">この本をリストに登録</button>
     </div>
 
-    <!-- リスト表示 -->
+    <!-- 登録済みリスト -->
     <div id="book-list"></div>
 </main>
 
@@ -220,17 +203,15 @@
     let html5QrCode;
     let startTime;
     let currentData = null;
-    let history = JSON.parse(localStorage.getItem('bookHistory') || '[]');
+    let history = JSON.parse(localStorage.getItem('bookHistory_v3') || '[]');
 
-    // 初回描画
     updateUI();
 
     /**
      * スキャン開始（タイマー開始）
      */
     async function startScan() {
-        startTime = performance.now(); // 計測開始
-        
+        startTime = performance.now();
         document.getElementById('scan-btn').style.display = 'none';
         document.getElementById('reader-wrapper').style.display = 'block';
         document.getElementById('preview-card').style.display = 'none';
@@ -240,83 +221,41 @@
             await html5QrCode.start(
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 250, height: 150 } },
-                onScanSuccess
+                (isbn) => { if(/^\d{10,13}$/.test(isbn)) { stopScan(); fetchBookData(isbn); } }
             );
         } catch (err) {
-            alert("カメラの起動に失敗しました。HTTPS環境で試してください。");
+            alert("カメラを起動できません。HTTPS環境でアクセスしてください。");
             stopScan();
         }
     }
 
-    /**
-     * スキャン成功
-     */
-   async function onScanSuccess(decodedText) {
-
-    const isbn = decodedText.replace(/\D/g, "");
-
-    if (!/^\d{10,13}$/.test(isbn)) return;
-
-    await stopScan();
-    fetchFromOpenBD(isbn);
-}
-    
-
-    /**
-     * スキャン停止
-     */
     async function stopScan() {
-        if (html5QrCode) {
-            await html5QrCode.stop();
-            html5QrCode = null;
-        }
+        if (html5QrCode) { await html5QrCode.stop(); html5QrCode = null; }
         document.getElementById('reader-wrapper').style.display = 'none';
         document.getElementById('scan-btn').style.display = 'block';
     }
 
-   /**
-     * 書籍情報を取得（openBDをメインに、画像をGoogle Booksで補完）
+    /**
+     * openBD APIのみを使用して書籍情報を取得
      */
-    async function fetchFromOpenBD(isbn) {
+    async function fetchBookData(isbn) {
         const loading = document.getElementById('loading-spinner');
         loading.style.display = 'block';
 
         try {
-            // 1. openBDで基本情報を取得
             const res = await fetch(`https://api.openbd.jp/v1/get?isbn=${isbn}`);
             const data = await res.json();
 
             if (data && data[0]) {
                 const b = data[0].summary;
                 
-                let coverUrl = b.cover; // openBDの画像URL
-
-                // 2. openBDに画像がない場合、Google Books APIに画像を探しに行く
-                if (!coverUrl) {
-                    try {
-                        const gRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
-                        const gData = await gRes.json();
-                        if (gData.totalItems > 0) {
-                            const gInfo = gData.items[0].volumeInfo;
-                            if (gInfo.imageLinks) {
-                                // より高画質な画像があれば取得。なければサムネイル。
-                                coverUrl = gInfo.imageLinks.thumbnail.replace('http:', 'https:');
-                            }
-                        }
-                    } catch (err) {
-                        console.log("Google Booksからの画像取得に失敗:", err);
-                    }
-                }
-
-                // 3. それでも画像がない場合はダミー画像
-                if (!coverUrl) {
-                    coverUrl = `https://via.placeholder.com/150x200?text=${encodeURIComponent(b.title)}`;
-                }
+                // 画像がない場合のプレースホルダー（本のタイトルを埋め込む）
+                const coverUrl = b.cover ? b.cover : `https://via.placeholder.com/150x200?text=${encodeURIComponent(b.title.substring(0,10))}`;
 
                 currentData = {
                     title: b.title,
-                    author: b.author || "不明な著者",
-                    publisher: b.publisher || "不明な出版社",
+                    author: b.author || "著者不明",
+                    publisher: b.publisher || "出版社不明",
                     cover: coverUrl,
                     isbn: isbn
                 };
@@ -332,73 +271,66 @@
         }
     }
 
-    /**
-     * プレビュー表示
-     */
     function showPreview() {
         document.getElementById('p-title').textContent = currentData.title;
         document.getElementById('p-author').textContent = currentData.author;
         document.getElementById('p-pub').textContent = currentData.publisher;
         document.getElementById('p-img').src = currentData.cover;
-        
         document.getElementById('preview-card').style.display = 'block';
         document.getElementById('scan-btn').style.display = 'none';
     }
 
-    /**
-     * 登録実行（タイマー終了・保存）
-     */
     function saveBook() {
-        const endTime = performance.now();
-        const seconds = ((endTime - startTime) / 1000).toFixed(1);
-
+        const duration = ((performance.now() - startTime) / 1000).toFixed(1);
         const newBook = {
             ...currentData,
-            regTime: parseFloat(seconds),
-            date: new Date().toLocaleString('ja-JP')
+            regTime: parseFloat(duration),
+            date: new Date().toLocaleString('ja-JP', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'})
         };
 
-        history.unshift(newBook); // 新しい順
-        localStorage.setItem('bookHistory', JSON.stringify(history));
+        history.unshift(newBook);
+        localStorage.setItem('bookHistory_v3', JSON.stringify(history));
 
-        // リセット
         currentData = null;
         document.getElementById('preview-card').style.display = 'none';
         document.getElementById('scan-btn').style.display = 'block';
-        
         updateUI();
     }
 
-    /**
-     * リストと統計の更新
-     */
     function updateUI() {
         const listContainer = document.getElementById('book-list');
         listContainer.innerHTML = '';
 
         if (history.length === 0) {
-            listContainer.innerHTML = '<p style="text-align:center; color:#999; margin-top:40px;">登録された本はありません</p>';
+            listContainer.innerHTML = '<p style="text-align:center; color:#999; margin-top:60px;">バーコードを読み取って<br>リストを作成しましょう！</p>';
             return;
         }
 
-        let totalSeconds = 0;
+        let totalTime = 0;
         history.forEach(book => {
-            totalSeconds += book.regTime;
+            totalTime += book.regTime;
+            const amzn = `https://www.amazon.co.jp/s?k=${book.isbn}`;
+            const raku = `https://search.rakuten.co.jp/search/mall/${book.isbn}/`;
+
             const el = document.createElement('div');
             el.className = 'list-item';
             el.innerHTML = `
-                <img src="${book.cover}" class="list-img">
+                <img src="${book.cover}" class="list-img" onerror="this.src='https://via.placeholder.com/150x200?text=No+Image'">
                 <div class="list-details">
                     <div class="list-title">${book.title}</div>
-                    <div class="list-meta">${book.author} / ${book.publisher}</div>
-                    <div class="list-meta">${book.date}</div>
-                    <div class="time-badge">登録時間: ${book.regTime}秒</div>
+                    <div class="list-meta">${book.author}</div>
+                    <div class="list-meta">${book.publisher} | ${book.date}</div>
+                    <div class="time-badge">登録: ${book.regTime}秒</div>
+                    <div class="link-group">
+                        <a href="${amzn}" target="_blank" class="btn-link amazon">Amazon</a>
+                        <a href="${raku}" target="_blank" class="btn-link rakuten">楽天ブックス</a>
+                    </div>
                 </div>
             `;
             listContainer.appendChild(el);
         });
 
-        const avg = (totalSeconds / history.length).toFixed(1);
+        const avg = (totalTime / history.length).toFixed(1);
         document.getElementById('avg-val').textContent = avg;
     }
 </script>
